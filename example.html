@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Nodel Example</title>
+    <script src='nodel.js'></script>
+    <link rel='stylesheet' href='nodel.css'>
+    <style>
+      html, body, #nodel {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      .basic {
+        border-style: solid;
+        padding: 10px;
+      }
+    </style>
+    <script defer>
+      var nr, nm
+      window.onload = () => {
+        // start a nodel instance
+        nr = new NodeRender()
+        nm = new NodeManager(nr)
+        
+        // do whatever
+        nm.addNode('basic', 0, -100, {text: 'Hello World'})
+      }
+    </script>
+  </head>
+  <body>
+
+    <!-- NODE VIEW -->
+    <div id='nodel'>
+
+      <!-- TEMPLATES -->
+      <div id='basic' class='basic'>{text}</div>
+
+    </div>
+  </body>
+</html>
