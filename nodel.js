@@ -68,7 +68,7 @@ class NodeManager {
       return true
     }
   
-    console.error(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
+    console.warn(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
     return false
   }
   // api
@@ -94,7 +94,7 @@ class NodeManager {
 
     const parentNode = this.nodes[parentId]
     const childNode = this.nodes[childId]
-    var [children, parents] = [parentNode.children, parentNode.parents]
+    var [children, parents] = [parentNode.children, childNode.parents]
 
     // configure linking
     //
@@ -110,12 +110,12 @@ class NodeManager {
       // disconnect
       arrRemove(children[connectionType], childId)
       arrRemove(parents[connectionType], parentId)
-      console.log('disconnecting')
+      console.log('disconnecting', parentId, childId)
     } else {
       // connect
       children[connectionType].push(childId)
       parents[connectionType].push(parentId)
-      console.log('connecting')
+      console.log('connecting', parentId, childId)
     }
 
     this.render.draw(this.nodes)
@@ -136,6 +136,10 @@ class NodeRender {
     this.resetScale()
     this.templates = findTemplates()
 
+    this.pencil = jsPlumbBrowserUI.newInstance({
+        container: document.getElementById('nodel')
+    })
+
     // hide the templates
     this.hideTemplates = false
     this.toggleTemplates()
@@ -152,6 +156,8 @@ class NodeRender {
   // internal
   clear() {
     const nodel = document.getElementById('nodel')
+
+    this.pencil.deleteEveryConnection()
     for (let idx = nodel.children.length-1; idx >= 0; idx--) {
       const child = nodel.children[idx]
       // clear all non template nodes
@@ -170,10 +176,11 @@ class NodeRender {
     // Draw Nodes
     
     for (const node of Object.values(nodes)) {
-      const nodeElem = document.getElementById(node.template).cloneNode(true)
-
       // add the element
+      const nodeElem = document.getElementById(node.template).cloneNode(true)
       nodel.appendChild(nodeElem)
+
+      // configure element
       nodeElem.id = node.id
       nodeElem.hidden = false
 
@@ -195,25 +202,22 @@ class NodeRender {
     //
     // Link Children
     
-    const lines = document.getElementById('lines')
     for (const [nodeId, node] of Object.entries(nodes)) {
-      const [nodeX, nodeY] = toRegPos(node)
+      const nodeElem = document.getElementById(nodeId)
 
       for (const [connectionType, children] of Object.entries(node.children)) {
         for (const childId of children) {
-          // draw an arrow to the child
-          const childNode = nodes[childId]
-          const [childX, childY] = toRegPos(childNode)
+          const childElem = document.getElementById(childId)
 
-          // draw an svg line from the node to the child
-          const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-          lines.appendChild(line)
-          line.setAttribute('x1', nodeX)
-          line.setAttribute('y1', nodeY)
-          line.setAttribute('x2', childX)
-          line.setAttribute('y2', childY)
-          line.setAttribute('stroke', 'black')
-          line.classList.add(`line-${connectionType}`)
+          // draw a line to the child
+          this.pencil.connect({
+            source: nodeElem,
+            target: childElem,
+            anchor: 'Continuous',
+            overlays: ["Arrow"]
+          })
+          this.pencil.setDraggable(nodeElem, false)
+          this.pencil.setDraggable(childElem, false)
         }
       }
     }
