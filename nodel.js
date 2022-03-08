@@ -25,6 +25,13 @@ function findTemplates() {
   return templateIds
 }
 
+function toRegPos(node) {
+  const nodel = document.getElementById('nodel')
+  const elemX = node.x + nodel.offsetWidth/2
+  const elemY = node.y + nodel.offsetHeight/2
+  return [elemX, elemY]
+}
+
 // Nodel
 
 class Node {
@@ -50,10 +57,9 @@ class NodelEvent {
 }
 
 class NodeManager {
-  constructor(renderEngine, verbose=false) {
+  constructor(renderEngine) {
     this.nodes = {}
     this.render = renderEngine
-    this.verbose = verbose
   }
   // helpers
   verify(id, exists=false) {
@@ -62,10 +68,7 @@ class NodeManager {
       return true
     }
   
-    if (this.verbose) {
-      console.error(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
-    }
-
+    console.error(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
     return false
   }
   // api
@@ -73,53 +76,56 @@ class NodeManager {
     if (this.render.verify(template)) {
       const id = uniqueId()
       this.nodes[id] = new Node(id, template, x, y, data)
-      this.render.draw(Object.values(this.nodes))
+      this.render.draw(this.nodes)
       return id
     }
   }
   deleteNode(id) {
     if (this.verify(id)) {
       delete this.nodes[id]
-      this.render.draw(Object.values(this.nodes))
+      this.render.draw(this.nodes)
     }
   }
-  toggleConnect(parentId, childId, connectionType) {
+  toggleConnect(parentId, childId, connectionType='default') {
     // verify both exist
-    if (!this.verify(parentId) || !this.verify(childId)) {
+    if (!(this.verify(parentId, true) && this.verify(childId, true))) {
       return
     }
 
-    parentNode = this.nodes[parentId]
-    childNode = this.nodes[childId]
+    const parentNode = this.nodes[parentId]
+    const childNode = this.nodes[childId]
+    var [children, parents] = [parentNode.children, parentNode.parents]
 
     // configure linking
-    if (!(connectionType in parentNode.children)) {
-      parentNode[connectionType] = []
+    //
+    if (!(connectionType in children)) {
+      children[connectionType] = []
     }
-    if (!(connectionType in childNode.parents)) {
-      childNode[connectionType] = []
+    if (!(connectionType in parents)) {
+      parents[connectionType] = []
     }
     
     // check if connected
-    if (childId in parentNode.children[connectionType]) {
-
+    if (children[connectionType].includes(childId)) {
       // disconnect
-      arrRemove(parentNode.children[connectionType], childId)
-      arrRemove(childNode.parents[connectionType], parentId)
+      arrRemove(children[connectionType], childId)
+      arrRemove(parents[connectionType], parentId)
+      console.log('disconnecting')
     } else {
       // connect
-      parentNode.children[connectionType].append(childId)
-      childNode.parents[connectionType].append(parentId)
+      children[connectionType].push(childId)
+      parents[connectionType].push(parentId)
+      console.log('connecting')
     }
 
-    this.render.draw(Object.values(this.nodes))
+    this.render.draw(this.nodes)
   }
   moveNode(id, x, y) {
     if (this.verify(id)) {
       node = this.nodes[id]
       node.x = x
       node.y = y
-      this.render.draw(Object.values(this.nodes))
+      this.render.draw(this.nodes)
     }
   }
 }
@@ -148,10 +154,11 @@ class NodeRender {
     const nodel = document.getElementById('nodel')
     for (let idx = nodel.children.length-1; idx >= 0; idx--) {
       const child = nodel.children[idx]
+      // clear all non template nodes
       if (!this.templates.includes(child.id)) {
         nodel.removeChild(child)
       }
- }
+    }
   }
   draw(nodes) {
     const nodel = document.getElementById('nodel')
@@ -159,14 +166,11 @@ class NodeRender {
     // keep templates and remove all other elements
     this.clear()
 
-    // nodel center
-    const centerX = nodel.offsetWidth / 2
-    const centerY = nodel.offsetHeight / 2
-
-    // draw nodes from templates
-    for (const node of nodes) {
-      const template = document.getElementById(node.template)
-      const nodeElem = template.cloneNode(true)
+    // 
+    // Draw Nodes
+    
+    for (const node of Object.values(nodes)) {
+      const nodeElem = document.getElementById(node.template).cloneNode(true)
 
       // add the element
       nodel.appendChild(nodeElem)
@@ -180,20 +184,37 @@ class NodeRender {
       }
 
       // calculate coordinates
-      const centerElemX = centerX - nodeElem.offsetWidth / 2
-      const centerElemY = centerY - nodeElem.offsetHeight / 2
-      const elemX = centerElemX + node.x
-      const elemY = centerElemY + node.y
+      const [elemX, elemY] = toRegPos(node)
 
       // set the position
       nodeElem.style.position = 'absolute'
-      nodeElem.style.left = `${elemX}px`
-      nodeElem.style.top = `${elemY}px`
+      nodeElem.style.left = `${elemX - nodeElem.offsetHeight/2}px`
+      nodeElem.style.top = `${elemY - nodeElem.offsetWidth/2}px`
+    }
 
-      // link the children
-      for (const [id, child] of Object.entries(node.children)) {
-        // draw an arrow to the child
-        // TODO: use LeaderLine (or some library like it)
+    //
+    // Link Children
+    
+    const lines = document.getElementById('lines')
+    for (const [nodeId, node] of Object.entries(nodes)) {
+      const [nodeX, nodeY] = toRegPos(node)
+
+      for (const [connectionType, children] of Object.entries(node.children)) {
+        for (const childId of children) {
+          // draw an arrow to the child
+          const childNode = nodes[childId]
+          const [childX, childY] = toRegPos(childNode)
+
+          // draw an svg line from the node to the child
+          const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+          lines.appendChild(line)
+          line.setAttribute('x1', nodeX)
+          line.setAttribute('y1', nodeY)
+          line.setAttribute('x2', childX)
+          line.setAttribute('y2', childY)
+          line.setAttribute('stroke', 'black')
+          line.classList.add(`line-${connectionType}`)
+        }
       }
     }
   }

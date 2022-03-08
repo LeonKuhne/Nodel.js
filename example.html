@@ -3,6 +3,11 @@
   <head>
     <meta charset="utf-8">
     <title>Nodel Example</title>
+
+    <!-- Libs -->
+    <script src="bundle/dist/jsplumb.bundle.js"></script>
+
+    <!-- Nodel -->
     <script src='nodel.js'></script>
     <link rel='stylesheet' href='nodel.css'>
     <style>
@@ -14,6 +19,10 @@
       .basic {
         border-style: solid;
         padding: 10px;
+        background: lightblue;
+      }
+      .line-default {
+        stroke:rgb(255,0,0);stroke-width:2
       }
     </style>
     <script defer>
@@ -24,17 +33,19 @@
         nm = new NodeManager(nr)
         
         // do whatever
-        nm.addNode('basic', 0, -100, {text: 'Hello World'})
+        let nodeAId = nm.addNode('basic', -100, 50, {name: 'A'})
+        let nodeBId = nm.addNode('basic', 100, -50, {name: 'B'})
+        nm.toggleConnect(nodeAId, nodeBId)
       }
     </script>
   </head>
   <body>
-
     <!-- NODE VIEW -->
     <div id='nodel'>
 
       <!-- TEMPLATES -->
-      <div id='basic' class='basic'>{text}</div>
+      <div id='basic' class='basic'>I'm {name}</div>
+      <svg id='lines'></svg>
 
     </div>
   </body>
