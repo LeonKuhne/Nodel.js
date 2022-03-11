@@ -1,3 +1,4 @@
+'use strict';
 
 // Helpers
 
@@ -34,7 +35,7 @@ function toRegPos(node) {
 
 // Nodel
 
-class Node {
+class Nodel {
   constructor(id, template, x, y, data) {
     this.id = id
     this.template = template
@@ -44,6 +45,14 @@ class Node {
 
     this.children = {}
     this.parents = {}
+  }
+
+  isLeaf() {
+    return Object.values(this.children)?.length == 0
+  }
+
+  isHead() {
+    return Object.values(this.parents)?.length == 0
   }
 }
 
@@ -56,7 +65,7 @@ class NodelEvent {
   }
 }
 
-class NodeManager {
+class NodelManager {
   constructor(renderEngine) {
     this.nodes = {}
     this.render = renderEngine
@@ -64,7 +73,7 @@ class NodeManager {
   // helpers
   verify(id, exists=false) {
     // by default, returns true if id exists
-    if ((id in this.nodes) == exists) {
+    if (id && (id in this.nodes) == exists) {
       return true
     }
   
@@ -75,7 +84,7 @@ class NodeManager {
   addNode(template, x, y, data) {
     if (this.render.verify(template)) {
       const id = uniqueId()
-      this.nodes[id] = new Node(id, template, x, y, data)
+      this.nodes[id] = new Nodel(id, template, x, y, data)
       this.render.draw(this.nodes)
       return id
     }
@@ -88,7 +97,11 @@ class NodeManager {
   }
   toggleConnect(parentId, childId, connectionType='default') {
     // verify both exist
-    if (!(this.verify(parentId, true) && this.verify(childId, true))) {
+    if (!(
+      this.verify(parentId, true) &&
+      this.verify(childId, true) &&
+      parentId != childId
+    )) {
       return
     }
 
@@ -128,9 +141,12 @@ class NodeManager {
       this.render.draw(this.nodes)
     }
   }
+  getHeads() {
+    return Object.values(this.nodes).filter(node => node.isHead())
+  }
 }
 
-class NodeRender {
+class NodelRender {
   constructor() {
     this.recenter()
     this.resetScale()
@@ -157,10 +173,12 @@ class NodeRender {
   clear() {
     const nodel = document.getElementById('nodel')
 
+    // reset the lines
     this.pencil.deleteEveryConnection()
+
+    // reset the nodes
     for (let idx = nodel.children.length-1; idx >= 0; idx--) {
       const child = nodel.children[idx]
-      // clear all non template nodes
       if (!this.templates.includes(child.id)) {
         nodel.removeChild(child)
       }
@@ -223,7 +241,7 @@ class NodeRender {
     }
   }
   verify(template, exists=true) {
-    if (this.templates.includes(template) == exists) {
+    if (template && this.templates.includes(template) == exists) {
       return true
     }
   
@@ -251,7 +269,7 @@ class NodeRender {
   }
 }
 
-class NodeListener {
+class NodelListener {
   constructor(nodeManager) {
     this.manager = nodeManager
   }

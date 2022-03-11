@@ -29,8 +29,8 @@
       var nr, nm
       window.onload = () => {
         // start a nodel instance
-        nr = new NodeRender()
-        nm = new NodeManager(nr)
+        nr = new NodelRender()
+        nm = new NodelManager(nr)
         
         // do whatever
         let nodeAId = nm.addNode('basic', -100, 50, {name: 'A'})
