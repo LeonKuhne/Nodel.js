@@ -57,24 +57,81 @@ class Nodel {
   isHead() {
     return Object.values(this.parents)?.length == 0
   }
+  isGroup() {
+    return !!this.group.ends.length
+  }
   groupAllChildren(nodes) {
     this.group.ends = this.getLeaves(nodes)
   }
+  parentGroupNodes(nodes) {
+    // get the closest group in parents
+    let groups = []
+    for (const [connectionType, parents] of Object.entries(this.parents)) {
+      for (const parentId of parents) {
+        const parentNode = nodes[parentId]
+
+        if (parentNode.isGroup()) {
+          // base case
+          groups.push(parentNode.id)
+
+        } else {
+          // recurse
+          groups = groups.concat(parentNode.parentGroupNodes(nodes))
+        }
+      }
+    }
+    return groups
+  }
+  hasChild(nodes, id, end=null) {
+    if (this.id === id) {
+      return true
+    }
+    if (this.id === end) {
+      return false
+    }
+
+    for (const [connectionType, children] of Object.entries(this.children)) {
+      for (const childId of children) {
+        const child = nodes[childId]
+        if (child.hasChild(nodes, id, end)) {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+  groupContains(nodes, id) {
+    for (const end of this.group.ends) {
+      if (this.hasChild(nodes, id, end)) {
+        return true
+      }
+    }
+    return false
+  }
   isVisible(nodes) {
+    const parentGroups = this.parentGroupNodes(nodes)
+    for (const nodeId of parentGroups) {
+      const node = nodes[nodeId]
+      if (node.groupContains(nodes, this.id)) {
+        return !node.group.collapsed
+      }
+    }
+
+    return true
+
+    /*
     // recursively check if all parents are collapsed (or ungrouped),
     // up until you find no head, or you reach the end of a group
     for (const [connectionType, parents] of Object.entries(this.parents)) {
       for (const parentId of parents) {
         const parentNode = nodes[parentId]
 
-        // reached end of other group, thus can't be group
-        if (this.id in parentNode.group.ends) {
-          return true
-        }
-
         // group is collapsed (or ungrouped)
         if (parentNode.group.collapsed) {
-          return false
+          if (parentNode.group.ends.includes(this.id)) {
+            return false
+          }
         }
 
         // recurse
@@ -84,10 +141,11 @@ class Nodel {
 
     // there are no parents, this must be a head
     return true
+    */
   }
   getLeaves(nodes, visited=[]) {
     // visit
-    if (this.id in visited) {
+    if (visited.includes(this.id)) {
       return null
     } else {
       visited.push(this.id)
@@ -157,7 +215,7 @@ class NodelManager {
       const node = this.nodes[id]
 
       // create the group if none exist
-      if (!node.group.ends) {
+      if (!node.group.ends.length) {
         this.createGroup(id, `${node.data.name} group`)
       }
 
@@ -191,33 +249,33 @@ class NodelManager {
         // TODO use the index as the connection type
         this.toggleConnect(leafId, childId, connectionType)
       }
-      return
-    }
-    const childNode = this.nodes[childId]
-
-
-    let [children, parents] = [parentNode.children, childNode.parents]
-
-    // configure linking
-    //
-    if (!(connectionType in children)) {
-      children[connectionType] = []
-    }
-    if (!(connectionType in parents)) {
-      parents[connectionType] = []
-    }
-    
-    // check if connected
-    if (children[connectionType].includes(childId)) {
-      // disconnect
-      arrRemove(children[connectionType], childId)
-      arrRemove(parents[connectionType], parentId)
-      console.log('disconnecting', parentId, childId)
     } else {
-      // connect
-      children[connectionType].push(childId)
-      parents[connectionType].push(parentId)
-      console.log('connecting', parentId, childId)
+      const childNode = this.nodes[childId]
+
+
+      let [children, parents] = [parentNode.children, childNode.parents]
+
+      // configure linking
+      //
+      if (!(connectionType in children)) {
+        children[connectionType] = []
+      }
+      if (!(connectionType in parents)) {
+        parents[connectionType] = []
+      }
+      
+      // check if connected
+      if (children[connectionType].includes(childId)) {
+        // disconnect
+        arrRemove(children[connectionType], childId)
+        arrRemove(parents[connectionType], parentId)
+        console.info('disconnecting', parentId, childId)
+      } else {
+        // connect
+        children[connectionType].push(childId)
+        parents[connectionType].push(parentId)
+        console.info('connecting', parentId, childId)
+      }
     }
 
     this.render.draw(this.nodes)
@@ -280,7 +338,11 @@ class NodelRender {
     this.clear()
 
     // filter out collapsed nodes
-    const visibleNodes = Object.values(nodes).filter(node => node.isVisible(nodes))
+    const visibleNodes = Object.values(nodes).filter(node => {
+      const isVisible = node.isVisible(nodes)
+      console.log(`${node.id} visible: ${isVisible}`)
+      return isVisible
+    })
     console.info('visible nodes', visibleNodes)
     // 
     // Draw Nodes
@@ -314,8 +376,6 @@ class NodelRender {
     // Link Children
     
     for (const node of visibleNodes) {
-      const nodeElem = document.getElementById(node.id)
-
       // format the node as a leaf
       const leaves = node.group.collapsed ? node.group.ends : [node.id]
 
@@ -326,23 +386,32 @@ class NodelRender {
           
         for (const [connectionType, children] of Object.entries(leaf.children)) {
           for (const childId of children) {
-            const childElem = document.getElementById(childId)
-
-            // TODO indicate the connectionId somewhere
-
-            // draw a line to the child
-            this.pencil.connect({
-              source: nodeElem,
-              target: childElem,
-              anchor: 'Continuous',
-              overlays: ["Arrow"]
-            })
-            this.pencil.setDraggable(nodeElem, false)
-            this.pencil.setDraggable(childElem, false)
+            const child = nodes[childId]
+            // filter out non visible nodes
+            if (visibleNodes.includes(child)) {
+              this.drawConnection(node.id, child.id)
+            }
           }
         }
       }
     }
+  }
+  drawConnection(fromId, toId) {
+    console.log(`drawing from ${fromId} to ${toId}`)
+    // TODO indicate the connectionId somewhere
+
+    const fromElem = document.getElementById(fromId)
+    const toElem = document.getElementById(toId)
+
+    // draw a line to the child
+    this.pencil.connect({
+      source: fromElem,
+      target: toElem,
+      anchor: 'Continuous',
+      overlays: ["Arrow"]
+    })
+    this.pencil.setDraggable(fromElem, false)
+    this.pencil.setDraggable(toElem, false)
   }
   verify(template, exists=true) {
     if (template && this.templates.includes(template) == exists) {
