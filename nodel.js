@@ -42,17 +42,71 @@ class Nodel {
     this.x = x 
     this.y = y
     this.data = data
+    this.group = {
+      name: null,
+      collapsed: false,
+      ends: [],
+    }
 
     this.children = {}
     this.parents = {}
   }
-
   isLeaf() {
     return Object.values(this.children)?.length == 0
   }
-
   isHead() {
     return Object.values(this.parents)?.length == 0
+  }
+  groupAllChildren(nodes) {
+    this.group.ends = this.getLeaves(nodes)
+  }
+  isVisible(nodes) {
+    // recursively check if all parents are collapsed (or ungrouped),
+    // up until you find no head, or you reach the end of a group
+    for (const [connectionType, parents] of Object.entries(this.parents)) {
+      for (const parentId of parents) {
+        const parentNode = nodes[parentId]
+
+        // reached end of other group, thus can't be group
+        if (this.id in parentNode.group.ends) {
+          return true
+        }
+
+        // group is collapsed (or ungrouped)
+        if (parentNode.group.collapsed) {
+          return false
+        }
+
+        // recurse
+        return parentNode.isVisible(nodes)
+      }
+    }
+
+    // there are no parents, this must be a head
+    return true
+  }
+  getLeaves(nodes, visited=[]) {
+    // visit
+    if (this.id in visited) {
+      return null
+    } else {
+      visited.push(this.id)
+    }
+
+    // base case
+    if (this.isLeaf()) {
+      return [this.id]
+    }
+
+    // recurse
+    let leaves = []
+    for (const [connectionType, children] of Object.entries(this.children)) {
+      for (const childId of children) {
+        const childNode = nodes[childId]
+        leaves = leaves.concat(childNode.getLeaves(nodes, visited))
+      }
+    }
+    return leaves
   }
 }
 
@@ -71,9 +125,9 @@ class NodelManager {
     this.render = renderEngine
   }
   // helpers
-  verify(id, exists=false) {
+  verify(id, exists=true) {
     // by default, returns true if id exists
-    if (id && (id in this.nodes) == exists) {
+    if (id && (id in this.nodes) === exists) {
       return true
     }
   
@@ -81,12 +135,34 @@ class NodelManager {
     return false
   }
   // api
-  addNode(template, x, y, data) {
-    if (this.render.verify(template)) {
+  addNode(templateId, x, y, data) {
+    if (this.render.verify(templateId)) {
       const id = uniqueId()
-      this.nodes[id] = new Nodel(id, template, x, y, data)
+      this.nodes[id] = new Nodel(id, templateId, x, y, data)
       this.render.draw(this.nodes)
       return id
+    }
+  }
+  createGroup(id, name) {
+    if (this.verify(id)) {
+      const node = this.nodes[id]
+      node.group.name = name
+      // NOTE this will create the group up to the nodes leaves
+      node.groupAllChildren(this.nodes)
+      this.render.draw(this.nodes)
+    }
+  }
+  toggleGroup(id) {
+    if (this.verify(id)) {
+      const node = this.nodes[id]
+
+      // create the group if none exist
+      if (!node.group.ends) {
+        this.createGroup(id, `${node.data.name} group`)
+      }
+
+      node.group.collapsed = !node.group.collapsed
+      this.render.draw(this.nodes)
     }
   }
   deleteNode(id) {
@@ -98,16 +174,29 @@ class NodelManager {
   toggleConnect(parentId, childId, connectionType='default') {
     // verify both exist
     if (!(
-      this.verify(parentId, true) &&
-      this.verify(childId, true) &&
+      this.verify(parentId) &&
+      this.verify(childId) &&
       parentId != childId
     )) {
       return
     }
 
+    // get the nodes to link
     const parentNode = this.nodes[parentId]
+    // use the leaf if parent is group and collapsed
+    if (parentNode.group.collapsed) {
+      const leaves = parentNode.getLeaves(this.nodes)
+      for (const [idx, leafId] of Object.entries(leaves)) {
+        // NOTE for now connect all leaves to child
+        // TODO use the index as the connection type
+        this.toggleConnect(leafId, childId, connectionType)
+      }
+      return
+    }
     const childNode = this.nodes[childId]
-    var [children, parents] = [parentNode.children, childNode.parents]
+
+
+    let [children, parents] = [parentNode.children, childNode.parents]
 
     // configure linking
     //
@@ -135,7 +224,7 @@ class NodelManager {
   }
   moveNode(id, x, y) {
     if (this.verify(id)) {
-      node = this.nodes[id]
+      let node = this.nodes[id]
       node.x = x
       node.y = y
       this.render.draw(this.nodes)
@@ -190,10 +279,13 @@ class NodelRender {
     // keep templates and remove all other elements
     this.clear()
 
+    // filter out collapsed nodes
+    const visibleNodes = Object.values(nodes).filter(node => node.isVisible(nodes))
+    console.info('visible nodes', visibleNodes)
     // 
     // Draw Nodes
     
-    for (const node of Object.values(nodes)) {
+    for (const node of visibleNodes) {
       // add the element
       const nodeElem = document.getElementById(node.template).cloneNode(true)
       nodel.appendChild(nodeElem)
@@ -204,7 +296,8 @@ class NodelRender {
 
       // supply variables
       // NOTE: vulnerable to XSS
-      for (const [attr, value] of Object.entries(node.data)) {
+      let varProps = node.group.collapsed ? node.group : node.data
+      for (let [attr, value] of Object.entries(varProps)) {
         nodeElem.innerHTML = nodeElem.innerHTML.replaceAll(`{${attr}}`, value)
       }
 
@@ -220,22 +313,33 @@ class NodelRender {
     //
     // Link Children
     
-    for (const [nodeId, node] of Object.entries(nodes)) {
-      const nodeElem = document.getElementById(nodeId)
+    for (const node of visibleNodes) {
+      const nodeElem = document.getElementById(node.id)
 
-      for (const [connectionType, children] of Object.entries(node.children)) {
-        for (const childId of children) {
-          const childElem = document.getElementById(childId)
+      // format the node as a leaf
+      const leaves = node.group.collapsed ? node.group.ends : [node.id]
 
-          // draw a line to the child
-          this.pencil.connect({
-            source: nodeElem,
-            target: childElem,
-            anchor: 'Continuous',
-            overlays: ["Arrow"]
-          })
-          this.pencil.setDraggable(nodeElem, false)
-          this.pencil.setDraggable(childElem, false)
+      // link node with the children of its leaves
+      for (const [connectionIdx, leafId] of Object.entries(leaves)) {
+        // the connectionIdx is the index of the end node, since there could be multiple
+        const leaf = nodes[leafId]
+          
+        for (const [connectionType, children] of Object.entries(leaf.children)) {
+          for (const childId of children) {
+            const childElem = document.getElementById(childId)
+
+            // TODO indicate the connectionId somewhere
+
+            // draw a line to the child
+            this.pencil.connect({
+              source: nodeElem,
+              target: childElem,
+              anchor: 'Continuous',
+              overlays: ["Arrow"]
+            })
+            this.pencil.setDraggable(nodeElem, false)
+            this.pencil.setDraggable(childElem, false)
+          }
         }
       }
     }
