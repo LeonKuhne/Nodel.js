@@ -98,8 +98,10 @@ class Nodel {
         }
       }
     }
-
     return false
+  }
+  isDirectChild(id, connectionType) {
+    return !!this.children[connectionType]?.includes(id)
   }
   groupContains(nodes, id) {
     for (const end of this.group.ends) {
@@ -109,39 +111,26 @@ class Nodel {
     }
     return false
   }
-  isVisible(nodes) {
+  getInvolvedGroupNodes(nodes) {
+    // get the groups a node is part of, if any
     const parentGroups = this.parentGroupNodes(nodes)
+    const myGroups = []
     for (const nodeId of parentGroups) {
       const node = nodes[nodeId]
       if (node.groupContains(nodes, this.id)) {
-        return !node.group.collapsed
+        myGroups.push(node)
       }
     }
-
-    return true
-
-    /*
-    // recursively check if all parents are collapsed (or ungrouped),
-    // up until you find no head, or you reach the end of a group
-    for (const [connectionType, parents] of Object.entries(this.parents)) {
-      for (const parentId of parents) {
-        const parentNode = nodes[parentId]
-
-        // group is collapsed (or ungrouped)
-        if (parentNode.group.collapsed) {
-          if (parentNode.group.ends.includes(this.id)) {
-            return false
-          }
-        }
-
-        // recurse
-        return parentNode.isVisible(nodes)
+    return myGroups
+  }
+  isVisible(nodes) {
+    const myGroups = this.getInvolvedGroupNodes(nodes)
+    for (const node of myGroups) {
+      if (node.group.collapsed) {
+        return false
       }
     }
-
-    // there are no parents, this must be a head
     return true
-    */
   }
   getLeaves(nodes, visited=[]) {
     // visit
@@ -241,44 +230,57 @@ class NodelManager {
 
     // get the nodes to link
     const parentNode = this.nodes[parentId]
-    // use the leaf if parent is group and collapsed
+
+    // handle groups
     if (parentNode.group.collapsed) {
-      const leaves = parentNode.getLeaves(this.nodes)
-      for (const [idx, leafId] of Object.entries(leaves)) {
-        // NOTE for now connect all leaves to child
-        // TODO use the index as the connection type
-        this.toggleConnect(leafId, childId, connectionType)
+      // parentNode must be a group, use its ends insted
+      for (const endId of parentNode.group.ends) {
+        this.toggleConnect(endId, childId, connectionType)
+        return
       }
+    } 
+
+    // toggle connected state
+    if (parentNode.isDirectChild(childId, connectionType)) {
+      this.disconnectNodes(parentId, childId, connectionType)
     } else {
-      const childNode = this.nodes[childId]
-
-
-      let [children, parents] = [parentNode.children, childNode.parents]
-
-      // configure linking
-      //
-      if (!(connectionType in children)) {
-        children[connectionType] = []
-      }
-      if (!(connectionType in parents)) {
-        parents[connectionType] = []
-      }
-      
-      // check if connected
-      if (children[connectionType].includes(childId)) {
-        // disconnect
-        arrRemove(children[connectionType], childId)
-        arrRemove(parents[connectionType], parentId)
-        console.info('disconnecting', parentId, childId)
-      } else {
-        // connect
-        children[connectionType].push(childId)
-        parents[connectionType].push(parentId)
-        console.info('connecting', parentId, childId)
-      }
+      this.connectNodes(parentId, childId, connectionType)
     }
 
     this.render.draw(this.nodes)
+  }
+  connectNodes(parentId, childId, connectionType) {
+    // verify both exist
+    if (!(
+      this.verify(parentId) &&
+      this.verify(childId) &&
+      parentId != childId
+    )) {
+      return
+    }
+
+    // get connecting children and parents
+    const children = this.nodes[parentId].children
+    const parents = this.nodes[childId].parents
+
+    // setup
+    if (!(connectionType in children)) {
+      children[connectionType] = []
+    }
+    if (!(connectionType in parents)) {
+      parents[connectionType] = []
+    }
+
+    // connect
+    children[connectionType].push(childId)
+    parents[connectionType].push(parentId)
+    console.info('connecting', parentId, childId)
+  }
+  disconnectNodes(parentId, childId, connectionType) {
+    // disconnect
+    arrRemove(children[connectionType], childId)
+    arrRemove(parents[connectionType], parentId)
+    console.info('disconnecting', parentId, childId)
   }
   moveNode(id, x, y) {
     if (this.verify(id)) {
@@ -338,12 +340,9 @@ class NodelRender {
     this.clear()
 
     // filter out collapsed nodes
-    const visibleNodes = Object.values(nodes).filter(node => {
-      const isVisible = node.isVisible(nodes)
-      console.log(`${node.id} visible: ${isVisible}`)
-      return isVisible
-    })
+    const visibleNodes = Object.values(nodes).filter(node => node.isVisible(nodes))
     console.info('visible nodes', visibleNodes)
+
     // 
     // Draw Nodes
     
