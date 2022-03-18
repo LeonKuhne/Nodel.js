@@ -465,8 +465,8 @@ class NodelRender {
 
       // set the position
       nodeElem.style.position = 'absolute'
-      nodeElem.style.left = `${elemX - nodeElem.offsetHeight/2}px`
-      nodeElem.style.top = `${elemY - nodeElem.offsetWidth/2}px`
+      nodeElem.style.left = `${elemX - nodeElem.offsetWidth/2}px`
+      nodeElem.style.top = `${elemY - nodeElem.offsetHeight/2}px`
     }
 
     //
