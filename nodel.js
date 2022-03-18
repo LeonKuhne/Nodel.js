@@ -47,9 +47,8 @@ class Nodel {
       collapsed: false,
       ends: [],
     }
-
-    this.children = {}
     this.parents = {}
+    this.children = {}
   }
   isLeaf() {
     return Object.values(this.children)?.length == 0
@@ -170,25 +169,46 @@ class NodelManager {
   constructor(renderEngine) {
     this.nodes = {}
     this.render = renderEngine
+    this.isDrawingPaused = false
   }
   // helpers
+  exists(id) {
+    return id && (id in this.nodes)
+  }
   verify(id, exists=true) {
     // by default, returns true if id exists
-    if (id && (id in this.nodes) === exists) {
+    if (this.exists(id) === exists) {
       return true
     }
   
     console.warn(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
     return false
   }
+  redraw() {
+    if (!this.isDrawingPaused) {
+      this.render.draw(this.nodes)
+    } else {
+      console.warn(`skipping draw request, drawing is paused`)
+    }
+  }
+  pauseDraw() {
+    console.info(`paused drawing`)
+    this.isDrawingPaused = true
+  }
+  unpauseDraw() {
+    console.info(`unpaused drawing`)
+    this.isDrawingPaused = false
+    this.redraw()
+  }
   // api
   addNode(templateId, x, y, data) {
     if (this.render.verify(templateId)) {
       const id = uniqueId()
       this.nodes[id] = new Nodel(id, templateId, x, y, data)
-      this.render.draw(this.nodes)
+      this.redraw()
       return id
     }
+    return null
   }
   createGroup(id, name) {
     if (this.verify(id)) {
@@ -196,7 +216,7 @@ class NodelManager {
       node.group.name = name
       // NOTE this will create the group up to the nodes leaves
       node.groupAllChildren(this.nodes)
-      this.render.draw(this.nodes)
+      this.redraw()
     }
   }
   toggleGroup(id) {
@@ -209,13 +229,13 @@ class NodelManager {
       }
 
       node.group.collapsed = !node.group.collapsed
-      this.render.draw(this.nodes)
+      this.redraw()
     }
   }
   deleteNode(id) {
     if (this.verify(id)) {
       delete this.nodes[id]
-      this.render.draw(this.nodes)
+      this.redraw()
     }
   }
   toggleConnect(parentId, childId, connectionType='default') {
@@ -247,7 +267,7 @@ class NodelManager {
       this.connectNodes(parentId, childId, connectionType)
     }
 
-    this.render.draw(this.nodes)
+    this.redraw()
   }
   connectNodes(parentId, childId, connectionType) {
     // verify both exist
@@ -284,14 +304,92 @@ class NodelManager {
   }
   moveNode(id, x, y) {
     if (this.verify(id)) {
-      let node = this.nodes[id]
+      const node = this.nodes[id]
+      const deltaX = x - node.x
+      const deltaY = y - node.y
+      // 
+
+      // update the nodes location
       node.x = x
       node.y = y
-      this.render.draw(this.nodes)
+
+      // update the location location
+      if (node.isGroup() && node.group.collapsed) {
+        // TODO move all of the children
+        this.eachChild(node, (child, connectionType) => {
+          child.x += deltaX
+          child.y += deltaY
+        }, node.group.ends)
+      }
+      this.redraw()
     }
   }
   getHeads() {
     return Object.values(this.nodes).filter(node => node.isHead())
+  }
+  eachChild(node, callback, until=[]) {
+    for (const [connectionType, children] of Object.entries(node.children)) {
+      for (const childId of children) {
+        if (!(childId in until)) {
+          callback(this.nodes[childId], connectionType)
+        }
+      }
+    }
+  }
+  getDirectNodes(map) {
+    const connections = {}
+    for (const [connectionType, nodes] of Object.entries(map)) {
+      // setup
+      if (!(connectionType in connections)) {
+        connections[connectionType] = []
+      }
+
+      // aggregate 
+      for (const childGroupMap of nodes) {
+        connections[connectionType].push(childGroupMap.id)
+      }
+    }
+    return connections
+  }
+  createGroupMap(node, ends=null, originX=0, originY=0) {
+    let groupName = null
+    if (ends) {
+      // head node
+      groupName = node.group.name
+    } else {
+      // decendant node
+      ends = node.group.ends
+    }
+
+    // base case
+    if (node.id in ends) {
+      return null
+    }
+
+    const childrenMap = {}
+    for (const [connectionType, children] of Object.entries(node.children)) {
+      // setup map
+      if (!(connectionType in childrenMap)) {
+        childrenMap[connectionType] = []
+      }
+
+      // aggregate children
+      for (const childId of children) {
+        const child = this.nodes[childId]
+
+        // save the map
+        const childMap = this.createGroupMap(child, ends, node.x, node.y)
+        childrenMap[connectionType].push(childMap)
+      }
+    }
+
+    return {
+      id: node.id,
+      offsetX: node.x - originX,
+      offsetY: node.y - originY,
+      parents: ends ? node.parents : null,
+      children: childrenMap ? childrenMap : null,
+    }
   }
 }
 
