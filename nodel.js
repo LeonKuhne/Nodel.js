@@ -62,7 +62,12 @@ class Nodel {
   groupAllChildren(nodes) {
     this.group.ends = this.getLeaves(nodes)
   }
-  parentGroupNodes(nodes) {
+  parentGroupNodes(nodes, visited=[]) {
+    if (visited.includes(this.id)) {
+      return []
+    }
+    visited.push(this.id)
+
     // get the closest group in parents
     let groups = []
     for (const [connectionType, parents] of Object.entries(this.parents)) {
@@ -75,7 +80,7 @@ class Nodel {
 
         } else {
           // recurse
-          groups = groups.concat(parentNode.parentGroupNodes(nodes))
+          groups = groups.concat(parentNode.parentGroupNodes(nodes, visited))
         }
       }
     }
@@ -162,6 +167,7 @@ class NodelEvent {
     this.x = htmlEvent.x - nodel.offsetWidth/2
     this.y = htmlEvent.y - nodel.offsetHeight/2
     this.node = node
+    this.elem = htmlEvent.target
   }
 }
 
@@ -170,6 +176,7 @@ class NodelManager {
     this.nodes = {}
     this.render = renderEngine
     this.isDrawingPaused = false
+    this.onDrawCallbacks = []
   }
   // helpers
   exists(id) {
@@ -184,9 +191,17 @@ class NodelManager {
     console.warn(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
     return false
   }
+  onDraw(callback) {
+    this.onDrawCallbacks.push(callback)
+  }
   redraw() {
     if (!this.isDrawingPaused) {
       this.render.draw(this.nodes)
+
+      // call on draw callbacks
+      for (const callback of this.onDrawCallbacks) {
+        callback()
+      }
     } else {
       console.warn(`skipping draw request, drawing is paused`)
     }
@@ -297,6 +312,10 @@ class NodelManager {
     console.info('connecting', parentId, childId)
   }
   disconnectNodes(parentId, childId, connectionType) {
+    // get connecting children and parents
+    const children = this.nodes[parentId].children
+    const parents = this.nodes[childId].parents
+
     // disconnect
     arrRemove(children[connectionType], childId)
     arrRemove(parents[connectionType], parentId)
@@ -315,7 +334,6 @@ class NodelManager {
 
       // update the location location
       if (node.isGroup() && node.group.collapsed) {
-        // TODO move all of the children
         this.eachChild(node, (child, connectionType) => {
           child.x += deltaX
           child.y += deltaY
