@@ -63,6 +63,7 @@ class Nodel {
     this.group.ends = this.getLeaves(nodes)
   }
   parentGroupNodes(nodes, visited=[]) {
+    // base case
     if (visited.includes(this.id)) {
       return []
     }
@@ -74,14 +75,13 @@ class Nodel {
       for (const parentId of parents) {
         const parentNode = nodes[parentId]
 
+        // collect
         if (parentNode.isGroup()) {
-          // base case
           groups.push(parentNode.id)
-
-        } else {
-          // recurse
-          groups = groups.concat(parentNode.parentGroupNodes(nodes, visited))
         }
+
+        // recurse
+        groups = groups.concat(parentNode.parentGroupNodes(nodes, visited))
       }
     }
     return groups
@@ -505,24 +505,33 @@ class NodelRender {
             // filter out non visible nodes
             if (visibleNodes.includes(child)) {
               this.drawConnection(node.id, child.id)
+
+            } else {
+              // TODO draw a dotted connection to the nodes parent group
+              const groups = child.getInvolvedGroupNodes(nodes)
+              const firstCollapsedGroup = groups.reverse().find(node => node.group.collapsed)
+              this.drawConnection(node.id, firstCollapsedGroup.id, true)
             }
           }
         }
       }
     }
   }
-  drawConnection(fromId, toId) {
+  drawConnection(fromId, toId, dashed=false) {
     console.log(`drawing from ${fromId} to ${toId}`)
-    // TODO indicate the connectionId somewhere
+    // TODO indicate the connectionId somewhere, perhaps with color
 
     const fromElem = document.getElementById(fromId)
     const toElem = document.getElementById(toId)
+    const lineStyle = { strokeWidth: 3, stroke: 'purple' }
+    const dashedLineStyle = { ...lineStyle, dashstyle: '3' }
 
     // draw a line to the child
     this.pencil.connect({
       source: fromElem,
       target: toElem,
       anchor: 'Continuous',
+      paintStyle: dashed ? dashedLineStyle : lineStyle,
       overlays: ["Arrow"]
     })
     this.pencil.setDraggable(fromElem, false)
