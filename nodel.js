@@ -56,8 +56,21 @@ class Nodel {
   isHead() {
     return Object.values(this.parents)?.length == 0
   }
-  isGroup() {
-    return !!this.group.ends.length
+  isGroup(collapsed=null) {
+    // is it a group?
+    if (!!this.group.ends.length) {
+
+      // ignore collapsed state
+      if (collapsed === null) {
+        return true
+      }
+
+      // is the collapsed state as expected
+      return this.group.collapsed === collapsed
+    }
+
+    // not a group
+    return false
   }
   groupAllChildren(nodes) {
     this.group.ends = this.getLeaves(nodes)
