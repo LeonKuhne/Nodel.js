@@ -231,7 +231,9 @@ class NodelManager {
   // api
   addNode(templateId, x, y, data) {
     if (this.render.verify(templateId)) {
+      // generate new id
       const id = uniqueId()
+      // create and track the node
       this.nodes[id] = new Nodel(id, templateId, x, y, data)
       this.redraw()
       return id
