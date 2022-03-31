@@ -20,6 +20,11 @@
         border-style: solid;
         padding: 10px;
         background: lightblue;
+        user-select: none;
+      }
+      /* the group class is added automatically for collapsed group nodes */
+      .basic + .group {
+        border-style: double;
       }
       .line-default {
         stroke:rgb(255,0,0);stroke-width:2
@@ -31,11 +36,48 @@
         // start a nodel instance
         nr = new NodelRender()
         nm = new NodelManager(nr)
+        nl = new NodelListener(nm)
         
-        // do whatever
+        // create some nodes
         let nodeAId = nm.addNode('basic', -100, 50, {name: 'A'})
         let nodeBId = nm.addNode('basic', 100, -50, {name: 'B'})
+        let nodeCId = nm.addNode('basic', 150, 150, {name: 'C'})
+
+        // connect the nodes
         nm.toggleConnect(nodeAId, nodeBId)
+        nm.toggleConnect(nodeBId, nodeCId)
+
+        // make a group and collapse it
+        nm.toggleGroup(nodeBId, true)
+
+        // click to toggle view
+        nl.on('click', e => {
+          if (e.node) {
+            nm.toggleGroup(e.node.id)
+          }
+        })
+
+        // move to drag and decorate the cursor
+        let draggingId = null
+        nl.on('mousedown', e => {
+          if (e.node) {
+            document.body.style.cursor = 'grabbing'
+            draggingId = e.node.id
+          }
+        })
+        nl.on('mousemove', e => {
+          if (draggingId) {
+            nm.moveNode(draggingId, e.x, e.y)
+          } else if (e.node) {
+            document.body.style.cursor = 'grab'
+          } else {
+            document.body.style.cursor = 'auto'
+          }
+        })
+        nl.on('mouseup', e => {
+          document.body.style.cursor = 'auto'
+          draggingId = null
+        })
       }
     </script>
   </head>

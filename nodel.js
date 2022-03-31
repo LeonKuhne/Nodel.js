@@ -228,6 +228,7 @@ class NodelManager {
     this.isDrawingPaused = false
     this.redraw()
   }
+
   // api
   addNode(templateId, x, y, data) {
     if (this.render.verify(templateId)) {
@@ -249,7 +250,7 @@ class NodelManager {
       this.redraw()
     }
   }
-  toggleGroup(id) {
+  toggleGroup(id, collapsed=null) {
     if (this.verify(id)) {
       const node = this.nodes[id]
 
@@ -258,12 +259,23 @@ class NodelManager {
         this.createGroup(id, `${node.data.name} group`)
       }
 
-      node.group.collapsed = !node.group.collapsed
+      node.group.collapsed = (collapsed == null) ? !node.group.collapsed : collapsed
       this.redraw()
     }
   }
   deleteNode(id) {
     if (this.verify(id)) {
+      const node = this.nodes[id]
+      // delete all of the nodes references
+      for (const childId of node.children) {
+        const child = this.nodes[childId]
+        child.parents.splice(child.parents.indexOf(id), 1)
+      }
+      for (const parentId of node.parents) {
+        const parent = this.nodes[parentId]
+        parent.children.splice(parent.children.indexOf(id), 1)
+      }
+      // delete the node
       delete this.nodes[id]
       this.redraw()
     }
@@ -417,7 +429,7 @@ class NodelManager {
     }
 
     return {
-      id: node.id,
+      id: groupName,
       offsetX: node.x - originX,
       offsetY: node.y - originY,
       parents: ends ? node.parents : null,
@@ -485,6 +497,9 @@ class NodelRender {
       // configure element
       nodeElem.id = node.id
       nodeElem.hidden = false
+      if (node.isGroup(true)) {
+        nodeElem.classList.add('group')
+      }
 
       // supply variables
       // NOTE: vulnerable to XSS
@@ -510,8 +525,7 @@ class NodelRender {
       const leaves = node.group.collapsed ? node.group.ends : [node.id]
 
       // link node with the children of its leaves
-      for (const [connectionIdx, leafId] of Object.entries(leaves)) {
-        // the connectionIdx is the index of the end node, since there could be multiple
+      for (const leafId of leaves) {
         const leaf = nodes[leafId]
           
         for (const [connectionType, children] of Object.entries(leaf.children)) {
