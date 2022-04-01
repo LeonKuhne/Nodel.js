@@ -266,17 +266,24 @@ class NodelManager {
   deleteNode(id) {
     if (this.verify(id)) {
       const node = this.nodes[id]
-      // delete all of the nodes references
-      for (const childId of node.children) {
-        const child = this.nodes[childId]
-        child.parents.splice(child.parents.indexOf(id), 1)
-      }
-      for (const parentId of node.parents) {
-        const parent = this.nodes[parentId]
-        parent.children.splice(parent.children.indexOf(id), 1)
-      }
       // delete the node
       delete this.nodes[id]
+      // delete the  childs parent reference
+      this.eachChild(node, child => {
+        for (const [connectionType, parents] of Object.entries(child.parents)) {
+          if (node.id in parents) {
+            child.parents[connectionType].splice(parents.indexOf(node.id), 1)
+          }
+        }
+      })
+      // delete the parents child reference
+      this.eachParent(parent, childsParent => {
+        for (const [connectionType, children] of Object.entries(parent.children)) {
+          if (node.id in children) {
+            parent.children[connectionType].splice(children.indexOf(node.id), 1)
+          }
+        }
+      })
       this.redraw()
     }
   }
@@ -361,6 +368,7 @@ class NodelManager {
 
       // update the location location
       if (node.isGroup() && node.group.collapsed) {
+        // TODO i think you also need to move the child nodes children here, recursively
         this.eachChild(node, (child, connectionType) => {
           child.x += deltaX
           child.y += deltaY
@@ -373,10 +381,20 @@ class NodelManager {
     return Object.values(this.nodes).filter(node => node.isHead())
   }
   eachChild(node, callback, until=[]) {
-    for (const [connectionType, children] of Object.entries(node.children)) {
-      for (const childId of children) {
-        if (!(childId in until)) {
-          callback(this.nodes[childId], connectionType)
+    this.eachConnection(node.children, callback, until)
+  }
+  eachParent(node, callback, until=[]) {
+    this.eachConnection(node.parents, callback, until)
+  }
+  eachConnection(connectionList, callback, until=[]) {
+    if (!connectionList) {
+      return
+    }
+    // callback on each connection
+    for (const [connectionType, connection] of Object.entries(connectionList)) {
+      for (const nodeId of connection) {
+        if (!(nodeId in until)) {
+          callback(this.nodes[nodeId], connectionType)
         }
       }
     }
@@ -397,11 +415,7 @@ class NodelManager {
     return connections
   }
   createGroupMap(node, ends=null, originX=0, originY=0) {
-    let groupName = null
-    if (ends) {
-      // head node
-      groupName = node.group.name
-    } else {
+    if (!ends) {
       // decendant node
       ends = node.group.ends
     }
@@ -429,7 +443,7 @@ class NodelManager {
     }
 
     return {
-      id: groupName,
+      id: node.data.name || node.id,
       offsetX: node.x - originX,
       offsetY: node.y - originY,
       parents: ends ? node.parents : null,
