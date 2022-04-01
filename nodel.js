@@ -552,7 +552,7 @@ class NodelRender {
 
     const fromElem = document.getElementById(fromId)
     const toElem = document.getElementById(toId)
-    const lineStyle = { strokeWidth: 3, stroke: 'purple' }
+    const lineStyle = { strokeWidth: 3, stroke: '#ad00d9' }
     const dashedLineStyle = { ...lineStyle, dashstyle: '3' }
 
     // draw a line to the child
