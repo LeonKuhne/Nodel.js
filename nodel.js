@@ -117,6 +117,24 @@ class Nodel {
     }
     return false
   }
+  moveConnection(list, id, prevType, newType) {
+    // remove the (target) id from the type
+    list[prevType].splice(list[prevType].indexOf(id), 1)
+
+    // create the new type if it doesn't exist
+    if (!list[newType]) {
+      list[newType] = []
+    }
+
+    // add the child to the new type
+    list[newType].push(id)
+  }
+  moveParent(parentId, prevType, newType) {
+    this.moveConnection(this.parents, parentId, prevType, newType)
+  }
+  moveChild(childId, prevType, newType) {
+    this.moveConnection(this.children, childId, prevType, newType)
+  }
   isDirectChild(id, connectionType) {
     return !!this.children[connectionType]?.includes(id)
   }
@@ -204,6 +222,9 @@ class NodelManager {
     console.warn(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
     return false
   }
+  verifyBoth(idA, idB, exists=true) {
+    return this.verify(idA) && this.verify(idB) && idA != idB
+  }
   onDraw(callback) {
     this.onDrawCallbacks.push(callback)
   }
@@ -288,12 +309,7 @@ class NodelManager {
     }
   }
   toggleConnect(parentId, childId, connectionType='default') {
-    // verify both exist
-    if (!(
-      this.verify(parentId) &&
-      this.verify(childId) &&
-      parentId != childId
-    )) {
+    if (!this.verifyBoth(parentId, childId)) {
       return
     }
 
@@ -318,13 +334,34 @@ class NodelManager {
 
     this.redraw()
   }
+  getConnectionType(parentId, childId) {
+    if (!this.verifyBoth(parentId, childId)) {
+      return
+    }
+    
+    // find the connection type
+    const parentNode = this.nodes[parentId]
+    for (const [connectionType, children] of Object.entries(parentNode.children)) {
+      if (children.includes(childId)) {
+        return connectionType
+      }
+    }
+    return null
+  }
+  setConnectionType(parentId, childId, type) {
+    if (!this.verifyBoth(parentId, childId)) {
+      return
+    }
+
+    // find the connection type
+    const prevType = this.getConnectionType(parentId, childId)
+    this.nodes[parentId].moveChild(childId, prevType, type)
+    this.nodes[childId].moveParent(parentId, prevType, type)
+
+    this.redraw()
+  }
   connectNodes(parentId, childId, connectionType) {
-    // verify both exist
-    if (!(
-      this.verify(parentId) &&
-      this.verify(childId) &&
-      parentId != childId
-    )) {
+    if (!this.verifyBoth(parentId, childId)) {
       return
     }
 
@@ -465,6 +502,8 @@ class NodelRender {
     // hide the templates
     this.hideTemplates = false
     this.toggleTemplates()
+    this.connectionBinding = {}
+    this.connectionColors = {}
   }
   toggleTemplates() {
     this.hideTemplates = !this.hideTemplates
@@ -489,6 +528,9 @@ class NodelRender {
         nodel.removeChild(child)
       }
     }
+  }
+  setConnectionColors(colorMap) {
+    this.connectionColors = colorMap
   }
   draw(nodes) {
     const nodel = document.getElementById('nodel')
@@ -545,32 +587,46 @@ class NodelRender {
         for (const [connectionType, children] of Object.entries(leaf.children)) {
           for (const childId of children) {
             const child = nodes[childId]
+            let start = node.id
+            let end = null
+            let dashed = false
+
             // filter out non visible nodes
             if (visibleNodes.includes(child)) {
-              this.drawConnection(node.id, child.id)
-
+              end = child.id
             } else {
-              // TODO draw a dotted connection to the nodes parent group
+              // draw a dotted connection to the nodes parent group
               const groups = child.getInvolvedGroupNodes(nodes)
               const firstCollapsedGroup = groups.reverse().find(node => node.group.collapsed)
-              this.drawConnection(node.id, firstCollapsedGroup.id, true)
+              end = firstCollapsedGroup.id
+              dashed = true
+            }
+
+            // draw the connection
+            const connection = this.drawConnection(node.id, child.id, connectionType, dashed)
+
+            // add any existing callbacks to the connection element
+            const binding = this.connectionBinding
+            if (binding) {
+              const arrowElem = connection.connector.path
+              arrowElem.addEventListener(binding.eventType, binding.callback)
             }
           }
         }
       }
     }
   }
-  drawConnection(fromId, toId, dashed=false) {
+  drawConnection(fromId, toId, type, dashed=false) {
     console.log(`drawing from ${fromId} to ${toId}`)
-    // TODO indicate the connectionId somewhere, perhaps with color
 
     const fromElem = document.getElementById(fromId)
     const toElem = document.getElementById(toId)
-    const lineStyle = { strokeWidth: 3, stroke: '#ad00d9' }
+    const lineColor = this.connectionColors[type] || '#ad00d9'
+    const lineStyle = { strokeWidth: 5, stroke: lineColor }
     const dashedLineStyle = { ...lineStyle, dashstyle: '3' }
 
     // draw a line to the child
-    this.pencil.connect({
+    const connection = this.pencil.connect({
       source: fromElem,
       target: toElem,
       anchor: 'Continuous',
@@ -579,6 +635,10 @@ class NodelRender {
     })
     this.pencil.setDraggable(fromElem, false)
     this.pencil.setDraggable(toElem, false)
+    return connection
+  }
+  addConnectionBindings(eventType, callback) {
+    this.connectionBinding = { eventType, callback }
   }
   verify(template, exists=true) {
     if (template && this.templates.includes(template) == exists) {
@@ -610,27 +670,40 @@ class NodelRender {
 }
 
 class NodelListener {
-  constructor(nodeManager) {
+  constructor(nodeManager, nodeRender) {
     this.manager = nodeManager
+    this.render = nodeRender
   }
-  on(eventType, callback) {
-    const nodel = document.getElementById('nodel')
+  on(eventType, callback, connections=false) {
+    // listen for events on connections
+    if (connections) {
 
-    // use nodels coordinate system
-    nodel.addEventListener(eventType, e => {
+      // manage connections
+      this.render.addConnectionBindings(
+        eventType, e => callback(new NodelEvent(e))
+      )
+      
+      // redraw to set the bindings
+      this.manager.redraw()
+    } else {
 
-      // add the node to the event if one selected
-      const nodeId = e.target?.id
-      let node = null
-      if (nodeId && this.manager.verify(nodeId, true)) {
-        node = this.manager.nodes[nodeId]
-      }
+      // listen for events on the nodel element
+      const nodel = document.getElementById('nodel')
+      nodel.addEventListener(eventType, e => {
 
-      // create a new 'nodel' event
-      const nodelEvent = new NodelEvent(e, node)
+        // add the node to the event if one selected
+        const nodeId = e.target?.id
+        let node = null
+        if (nodeId && this.manager.verify(nodeId, true)) {
+          node = this.manager.nodes[nodeId]
+        }
 
-      // trigger the event
-      callback(nodelEvent)
-    })
+        // create a new 'nodel' event
+        const nodelEvent = new NodelEvent(e, node)
+
+        // trigger the event
+        callback(nodelEvent)
+      })
+    }
   }
 }

@@ -36,7 +36,7 @@
         // start a nodel instance
         nr = new NodelRender()
         nm = new NodelManager(nr)
-        nl = new NodelListener(nm)
+        nl = new NodelListener(nm, nr)
         
         // create some nodes
         let nodeAId = nm.addNode('basic', -100, 50, {name: 'A'})
@@ -78,6 +78,21 @@
           document.body.style.cursor = 'auto'
           draggingId = null
         })
+
+        // setup connection colors
+        nr.setConnectionColors({
+          'default': '#ad00d9',
+          'alternate': '#006700',
+        })
+
+        // listen for connection clicks
+        nl.on('click', (e) => {
+          let connectionType = nm.getConnectionType(nodeAId, nodeBId)
+
+          // toggle and update the connection type
+          connectionType = connectionType === 'default' ? 'alternate' : 'default'
+          nm.setConnectionType(nodeAId, nodeBId, connectionType)
+        }, true)
       }
     </script>
   </head>
