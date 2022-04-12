@@ -520,7 +520,7 @@ class NodelRender {
     this.hideTemplates = false
     this.toggleTemplates()
     this.connectionBinding = {}
-    this.connectionColors = {}
+    this.connectionColorCallback = () => '#ad00d9'
   }
   toggleTemplates() {
     this.hideTemplates = !this.hideTemplates
@@ -546,8 +546,8 @@ class NodelRender {
       }
     }
   }
-  setConnectionColors(colorMap) {
-    this.connectionColors = colorMap
+  setConnectionColors(colorCallback) {
+    this.connectionColorCallback = colorCallback
   }
   draw(nodes) {
     const nodel = document.getElementById('nodel')
@@ -640,8 +640,8 @@ class NodelRender {
 
     const fromElem = document.getElementById(fromId)
     const toElem = document.getElementById(toId)
-    const lineColor = this.connectionColors[type] || '#ad00d9'
-    const lineStyle = { strokeWidth: 5, stroke: lineColor }
+    const lineColor = this.connectionColorCallback(type)
+    const lineStyle = { strokeWidth: 6, stroke: lineColor }
     const dashedLineStyle = { ...lineStyle, dashstyle: '3' }
 
     // draw a line to the child

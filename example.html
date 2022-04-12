@@ -80,10 +80,10 @@
         })
 
         // setup connection colors
-        nr.setConnectionColors({
+        nr.setConnectionColors(connectionType => ({
           'default': '#ad00d9',
           'alternate': '#006700',
-        })
+        }[connectionType]))
 
         // listen for connection clicks
         nl.on('click', (e) => {
