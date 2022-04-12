@@ -87,11 +87,12 @@
 
         // listen for connection clicks
         nl.on('click', (e) => {
-          let connectionType = nm.getConnectionType(nodeAId, nodeBId)
+          const [source, target] = e.nodes
+          let connectionType = nm.getConnectionType(source.id, target.id)
 
           // toggle and update the connection type
           connectionType = connectionType === 'default' ? 'alternate' : 'default'
-          nm.setConnectionType(nodeAId, nodeBId, connectionType)
+          nm.setConnectionType(source.id, target.id, connectionType)
         }, true)
       }
     </script>

@@ -193,12 +193,29 @@ class Nodel {
 }
 
 class NodelEvent {
-  constructor(htmlEvent, node=null) {
+
+  static TYPES = {
+    Node: 0,
+    Connection: 1,
+  }
+
+  constructor(type, htmlEvent, nodes=null) {
     const nodel = document.getElementById('nodel')
+    this.elem = htmlEvent.target
     this.x = htmlEvent.x - nodel.offsetWidth/2
     this.y = htmlEvent.y - nodel.offsetHeight/2
-    this.node = node
-    this.elem = htmlEvent.target
+
+    // Event type specific setters
+    switch (type) {
+      case NodelEvent.TYPES.Node:
+        this.node = nodes
+        break;
+      case NodelEvent.TYPES.Connection:
+        this.nodes = nodes
+        break;
+      default:
+        console.error(`Unknown NodelEvent type: ${type}`)
+    }
   }
 }
 
@@ -609,7 +626,9 @@ class NodelRender {
             const binding = this.connectionBinding
             if (binding) {
               const arrowElem = connection.connector.path
-              arrowElem.addEventListener(binding.eventType, binding.callback)
+              arrowElem.addEventListener(binding.eventType, (e) => {
+                binding.callback( e, [node.id, child.id])
+              })
             }
           }
         }
@@ -637,7 +656,7 @@ class NodelRender {
     this.pencil.setDraggable(toElem, false)
     return connection
   }
-  addConnectionBindings(eventType, callback) {
+  addConnectionBinding(eventType, callback) {
     this.connectionBinding = { eventType, callback }
   }
   verify(template, exists=true) {
@@ -677,11 +696,14 @@ class NodelListener {
   on(eventType, callback, connections=false) {
     // listen for events on connections
     if (connections) {
-
       // manage connections
-      this.render.addConnectionBindings(
-        eventType, e => callback(new NodelEvent(e))
-      )
+      this.render.addConnectionBinding(eventType, (e, nodeIds) => {
+        // parse nodes
+        const nodes = nodeIds.map(id => this.manager.nodes[id])
+
+        // trigger event
+        callback(new NodelEvent(NodelEvent.TYPES.Connection, e, nodes))
+      })
       
       // redraw to set the bindings
       this.manager.redraw()
@@ -699,9 +721,9 @@ class NodelListener {
         }
 
         // create a new 'nodel' event
-        const nodelEvent = new NodelEvent(e, node)
+        const nodelEvent = new NodelEvent(NodelEvent.TYPES.Node, e, node)
 
-        // trigger the event
+        // trigger event
         callback(nodelEvent)
       })
     }
