@@ -51,10 +51,10 @@ class Nodel {
     this.children = {}
   }
   isLeaf() {
-    return Object.values(this.children)?.length == 0
+    return !Object.values(this.children)?.length
   }
   isHead() {
-    return Object.values(this.parents)?.length == 0
+    return !Object.values(this.parents)?.length
   }
   isGroup(collapsed=null) {
     // is it a group?
@@ -335,7 +335,7 @@ class NodelManager {
 
     // handle groups
     if (parentNode.group.collapsed) {
-      // parentNode must be a group, use its ends insted
+      // parentNode must be a group, use its ends instead
       for (const endId of parentNode.group.ends) {
         this.toggleConnect(endId, childId, connectionType)
         return
