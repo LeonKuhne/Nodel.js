@@ -258,11 +258,11 @@ class NodelManager {
     }
   }
   pauseDraw() {
-    console.info(`paused drawing`)
+    console.debug(`Drawing paused`)
     this.isDrawingPaused = true
   }
   unpauseDraw() {
-    console.info(`unpaused drawing`)
+    console.debug(`Drawing unpaused`)
     this.isDrawingPaused = false
     this.redraw()
   }
@@ -397,7 +397,7 @@ class NodelManager {
     // connect
     children[connectionType].push(childId)
     parents[connectionType].push(parentId)
-    console.info('connecting', parentId, childId)
+    console.debug('Connected', parentId, childId)
   }
   disconnectNodes(parentId, childId, connectionType) {
     // get connecting children and parents
@@ -407,7 +407,7 @@ class NodelManager {
     // disconnect
     arrRemove(children[connectionType], childId)
     arrRemove(parents[connectionType], parentId)
-    console.info('disconnecting', parentId, childId)
+    console.debug('Disconnected', parentId, childId)
   }
   moveNode(id, x, y) {
     if (this.verify(id)) {
@@ -429,6 +429,7 @@ class NodelManager {
         }, node.group.ends)
       }
       this.redraw()
+      console.debug('Moved node to', x, y)
     }
   }
   getHeads() {
@@ -557,7 +558,7 @@ class NodelRender {
 
     // filter out collapsed nodes
     const visibleNodes = Object.values(nodes).filter(node => node.isVisible(nodes))
-    console.info('visible nodes', visibleNodes)
+    console.debug('Visible nodes', visibleNodes)
 
     // 
     // Draw Nodes
@@ -636,7 +637,7 @@ class NodelRender {
     }
   }
   drawConnection(fromId, toId, type, dashed=false) {
-    console.log(`drawing from ${fromId} to ${toId}`)
+    console.debug(`Drawing from ${fromId} to ${toId}`)
 
     const fromElem = document.getElementById(fromId)
     const toElem = document.getElementById(toId)
