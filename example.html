@@ -29,6 +29,9 @@
       .line-default {
         stroke:rgb(255,0,0);stroke-width:2
       }
+      .line-label {
+        background: #fffa;
+      }
     </style>
     <script defer>
       var nr, nm
@@ -80,10 +83,13 @@
         })
 
         // setup connection colors
-        nr.setConnectionColors(connectionType => ({
+        nr.on('connection-color', connectionType => ({
           'default': '#ad00d9',
           'alternate': '#006700',
         }[connectionType]))
+        nr.on('connection-label', (source, target, type) => {
+          return `${source.data.name} to ${target.data.name}`
+        })
 
         // listen for connection clicks
         nl.on('click', (e) => {

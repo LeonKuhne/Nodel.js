@@ -522,6 +522,11 @@ class NodelRender {
     this.toggleTemplates()
     this.connectionBinding = {}
     this.connectionColorCallback = () => '#ad00d9'
+    this.connectionLabelCallback = () => ''
+    this.helpers = {
+      'connection-color': () => '#ad00d9',
+      'connection-label': () => '',
+    }
   }
   toggleTemplates() {
     this.hideTemplates = !this.hideTemplates
@@ -547,8 +552,8 @@ class NodelRender {
       }
     }
   }
-  setConnectionColors(colorCallback) {
-    this.connectionColorCallback = colorCallback
+  on(type, callback) {
+    this.helpers[type] = callback
   }
   draw(nodes) {
     const nodel = document.getElementById('nodel')
@@ -621,7 +626,7 @@ class NodelRender {
             }
 
             // draw the connection
-            const connection = this.drawConnection(node.id, child.id, connectionType, dashed)
+            const connection = this.drawConnection(node, child, connectionType, dashed)
 
             // add any existing callbacks to the connection element
             const binding = this.connectionBinding
@@ -636,12 +641,14 @@ class NodelRender {
       }
     }
   }
-  drawConnection(fromId, toId, type, dashed=false) {
+  drawConnection(fromNode, toNode, type, dashed=false) {
+    const [fromId, toId] = [fromNode.id, toNode.id]
     console.debug(`Drawing from ${fromId} to ${toId}`)
 
     const fromElem = document.getElementById(fromId)
     const toElem = document.getElementById(toId)
-    const lineColor = this.connectionColorCallback(type)
+    const lineColor = this.helpers['connection-color'](type)
+    const lineLabel = this.helpers['connection-label'](fromNode, toNode, type)
     const lineStyle = { strokeWidth: 6, stroke: lineColor }
     const dashedLineStyle = { ...lineStyle, dashstyle: '3' }
 
@@ -651,7 +658,10 @@ class NodelRender {
       target: toElem,
       anchor: 'Continuous',
       paintStyle: dashed ? dashedLineStyle : lineStyle,
-      overlays: ["Arrow"]
+      overlays: [
+        {type: "Arrow", options: { location: 1 }},
+        {type: 'Label', options: { label: lineLabel, cssClass: 'line-label' }},
+      ]
     })
     this.pencil.setDraggable(fromElem, false)
     this.pencil.setDraggable(toElem, false)

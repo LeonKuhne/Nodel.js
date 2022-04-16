@@ -14,3 +14,7 @@ html, body {
   height: 100%;
   display: block;
 }
+
+.line-label {
+  z-index: 1;
+}
