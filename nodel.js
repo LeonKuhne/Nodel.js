@@ -240,7 +240,7 @@ class NodelManager {
     return false
   }
   verifyBoth(idA, idB, exists=true) {
-    return this.verify(idA) && this.verify(idB) && idA != idB
+    return this.verify(idA) && this.verify(idB)
   }
   onDraw(callback) {
     this.onDrawCallbacks.push(callback)
@@ -661,7 +661,8 @@ class NodelRender {
       overlays: [
         {type: "Arrow", options: { location: 1 }},
         {type: 'Label', options: { label: lineLabel, cssClass: 'line-label' }},
-      ]
+      ],
+      connector: fromId === toId ? "StateMachine" : "Straight", // "Bezier" works too
     })
     this.pencil.setDraggable(fromElem, false)
     this.pencil.setDraggable(toElem, false)
