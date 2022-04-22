@@ -662,7 +662,7 @@ class NodelRender {
         {type: "Arrow", options: { location: 1 }},
         {type: 'Label', options: { label: lineLabel, cssClass: 'line-label' }},
       ],
-      connector: fromId === toId ? "StateMachine" : "Straight", // "Bezier" works too
+      connector: fromId === toId ? "StateMachine" : "Bezier", // "Straight" works too
     })
     this.pencil.setDraggable(fromElem, false)
     this.pencil.setDraggable(toElem, false)
