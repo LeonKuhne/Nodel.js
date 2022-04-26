@@ -57,8 +57,7 @@ class Nodel {
     return !Object.values(this.parents)?.length
   }
   isGroup(collapsed=null) {
-    // is it a group?
-    if (!!this.group.ends.length) {
+    if (!!this.group.ends.length || this.group.name) {
 
       // ignore collapsed state
       if (collapsed === null) {
@@ -223,7 +222,7 @@ class NodelManager {
   constructor(renderEngine) {
     this.nodes = {}
     this.render = renderEngine
-    this.isDrawingPaused = false
+    this.isDrawingPaused = 0
     this.onDrawCallbacks = []
   }
   // helpers
@@ -258,12 +257,15 @@ class NodelManager {
     }
   }
   pauseDraw() {
-    console.debug(`Drawing paused`)
-    this.isDrawingPaused = true
+    this.isDrawingPaused += 1
+    console.debug(`Drawing paused: ${this.isDrawingPaused}`)
   }
   unpauseDraw() {
-    console.debug(`Drawing unpaused`)
-    this.isDrawingPaused = false
+    console.debug(`Drawing unpaused: ${this.isDrawingPaused}`)
+    this.isDrawingPaused -= 1
+    if (this.isDrawingPaused < 0) {
+      console.error(`Something has gone terribly wrong`)
+    }
     this.redraw()
   }
 
