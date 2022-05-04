@@ -280,7 +280,8 @@ class NodelManager {
     }
 
     return {
-      id: node.data.name || node.id,
+      id: node.id,
+      moduleId: node.data.name,
       offsetX: node.x - originX,
       offsetY: node.y - originY,
       parents: ends ? node.parents : null,

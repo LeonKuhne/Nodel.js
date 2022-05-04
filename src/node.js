@@ -132,7 +132,7 @@ class Nodel {
   getLeaves(nodes, visited=[]) {
     // visit
     if (visited.includes(this.id)) {
-      return null
+      return []
     } else {
       visited.push(this.id)
     }
