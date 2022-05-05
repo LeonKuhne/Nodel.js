@@ -6,6 +6,9 @@ class NodelManager {
     this.onDrawCallbacks = []
   }
   // helpers
+  isEmpty() {
+    return !Object.keys(this.nodes).length
+  }
   exists(id) {
     return id && (id in this.nodes)
   }
@@ -287,5 +290,13 @@ class NodelManager {
       parents: ends ? node.parents : null,
       children: childrenMap ? childrenMap : null,
     }
+  }
+
+  load(nodeList) {
+    // recreate the node objects from the list of node objects
+    for (const nodeObj of nodeList) {
+      this.nodes[nodeObj.id] = Nodel.fromJSON(nodeObj)
+    }
+    this.redraw()
   }
 }

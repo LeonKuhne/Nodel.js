@@ -1,17 +1,29 @@
 class Nodel {
-  constructor(id, template, x, y, data) {
+
+  // TODO refactor the constructor to take a json object directly
+  static fromJSON(obj) {
+    return new Nodel(
+      obj.id, obj.template, obj.x, obj.y, obj.data,
+      obj.parents, obj.children, obj.group
+    )
+  }
+
+  constructor(id, template, x, y, data,
+    parents={}, children={},
+    group={
+      name: null,
+      collapsed: false,
+      ends: [],
+    },
+  ) {
     this.id = id
     this.template = template
     this.x = x 
     this.y = y
     this.data = data
-    this.group = {
-      name: null,
-      collapsed: false,
-      ends: [],
-    }
-    this.parents = {}
-    this.children = {}
+    this.parents = parents
+    this.children = children
+    this.group = group
   }
   isLeaf() {
     return !Object.values(this.children)?.length
