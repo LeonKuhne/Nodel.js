@@ -291,7 +291,39 @@ class NodelManager {
       children: childrenMap ? childrenMap : null,
     }
   }
+  createFromMap(
+    map, x, y,
+    head=null, group=null, created={}, connection=null,
+  ) {
+    // find/create the next map head node
+    let node = head ?? created[map.id] ?? this.headNodeFromMap(map, x, y)
 
+    // create if new
+    if (!(map.id in created)) {
+      created[map.id] = node
+
+      // recursively create nodes in group
+      for (const [connectionType, children] of Object.entries(map.children)) {
+        for (const childMap of children) {
+          this.createFromMap(
+            childMap, node.x, node.y,
+            null, null, created, {
+            type: connectionType,
+            parentId: node.id,
+          })
+        }
+      }
+    }
+
+    // create connections
+    const toKey = JSON.stringify
+    if (connection) {
+      this.state.nodel.manager.connectNodes(connection.parentId, node.id, connection.type)
+      node.conn.push(toKey(connection))
+    }
+
+    return node.id
+  }
   load(nodeList) {
     // recreate the node objects from the list of node objects
     for (const nodeObj of nodeList) {
