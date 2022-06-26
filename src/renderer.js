@@ -143,6 +143,7 @@ class NodelRender {
     const lineStyle = { strokeWidth: 6, stroke: lineColor }
     const dashedLineStyle = { ...lineStyle, dashstyle: '3' }
 
+
     // draw a line to the child
     const connection = this.pencil.connect({
       source: fromElem,
@@ -153,11 +154,20 @@ class NodelRender {
         {type: "Arrow", options: { location: 1 }},
         {type: 'Label', options: { label: lineLabel, cssClass: 'line-label' }},
       ],
-      connector: fromId === toId ? "StateMachine" : "Bezier", // "Straight" works too
+      connector: this.connectionType(fromNode, toNode)
     })
     this.pencil.setDraggable(fromElem, false)
     this.pencil.setDraggable(toElem, false)
     return connection
+  }
+  connectionType(fromNode, toNode, minDistance=300) {
+    if (fromNode.id == toNode.id) {
+      return "StateMachine"
+    } else if(fromNode.distanceTo(toNode) < minDistance) {
+      return "Straight"
+    } else {
+      return "Bezier"
+    }
   }
   addConnectionBinding(eventType, callback) {
     this.connectionBinding = { eventType, callback }
