@@ -135,7 +135,7 @@ class Nodel {
   isVisible(nodes) {
     const myGroups = this.getInvolvedGroupNodes(nodes)
     for (const node of myGroups) {
-      if (node.group.collapsed) {
+      if (this.id != node.id && node.group.collapsed && node.groupContains(nodes, this.id)) {
         return false
       }
     }
