@@ -1,7 +1,3 @@
-'use strict';
-
-// Helper functions
-
 function uniqueId() {
   return String(Math.random().toString(16).slice(2))
 }

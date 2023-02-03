@@ -17,8 +17,8 @@ class NodelManager {
     if (this.exists(id) === exists) {
       return true
     }
-  
-    console.warn(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
+    
+    console.debug(`(nodel) ${!exists ? "found" : "couldn't find"} #${id}`)
     return false
   }
   verifyBoth(idA, idB, exists=true) {

@@ -1,0 +1,29 @@
+#!/bin/bash
+title "nodel"
+help .cd | indent
+
+function build() {
+  rm nodel.js
+  chunk src/util.js
+  chunk src/node.js
+  chunk src/event.js
+  chunk src/manager.js
+  chunk src/renderer.js
+  chunk src/listener.js
+  clean
+}
+
+function release() {
+  build
+  uglifyjs --compress --mangle -- nodel.js > nodel.min.js
+}
+
+function chunk() {
+  echo "// $(basename $1)" >> nodel.js
+  cat "$1" >> nodel.js
+  echo >> nodel.js
+}
+
+function clean() {
+  sed -i '' "/^.*console\.debug.*$/d" nodel.js
+}
