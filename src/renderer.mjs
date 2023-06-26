@@ -1,10 +1,14 @@
-class NodelRender {
+import { findTemplates } from './util.mjs'
+import { toRegPos } from './util.mjs'
+import { newInstance } from "@jsplumb/browser-ui"
+
+export class NodelRender {
   constructor() {
     this.recenter()
     this.resetScale()
     this.templates = findTemplates()
 
-    this.pencil = jsPlumbBrowserUI.newInstance({
+    this.pencil = newInstance({
         container: document.getElementById('nodel')
     })
 

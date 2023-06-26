@@ -3,8 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>Nodel Example</title>
-    <script src='nodel.js'></script>
-    <link rel='stylesheet' href='nodel.css'>
+    <link rel='stylesheet' href='styles.css'>
     <style>
       html, body, #nodel {
         width: 100%;
@@ -28,13 +27,14 @@
         background: #fffa;
       }
     </style>
-    <script defer>
+    <script type="module">
+      import * as Nodel from './src/index.mjs'
       var nr, nm
       window.onload = () => {
         // start a nodel instance
-        nr = new NodelRender()
-        nm = new NodelManager(nr)
-        nl = new NodelListener(nm, nr)
+        nr = new Nodel.Render()
+        nm = new Nodel.Manager(nr)
+        nl = new Nodel.Listener(nm, nr)
         
         // create some nodes
         let nodeAId = nm.addNode('basic', -100, 50, {name: 'A'})

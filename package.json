@@ -1,0 +1,27 @@
+{
+  "name": "nodel",
+  "version": "1.0.0",
+  "description": "Library for positioning DOM elements with x,y coordinates",
+  "main": "src/index.mjs",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "start": "parcel index.html",
+    "test": "npm start && python -m http.server 8000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leonkuhne/nodel.git"
+  },
+  "author": "leonk.dev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/leonkuhne/nodel/issues"
+  },
+  "homepage": "https://github.com/leonkuhne/nodel#readme",
+  "dependencies": {
+    "@jsplumb/browser-ui": "^6.2.8",
+    "parcel-bundler": "^1.12.5"
+  }
+}

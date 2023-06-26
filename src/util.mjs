@@ -1,15 +1,15 @@
-function uniqueId() {
+export function uniqueId() {
   return String(Math.random().toString(16).slice(2))
 }
 
-function arrRemove(arr, elem) {
+export function arrRemove(arr, elem) {
   const idx = arr.indexOf(elem)
   if (idx > -1) {
     arr.splice(idx, 1)
   }
 }
 
-function findTemplates() {
+export function findTemplates() {
   const nodel = document.getElementById('nodel')
   const templates = nodel.children
   const templateIds = []
@@ -22,7 +22,7 @@ function findTemplates() {
   return templateIds
 }
 
-function toRegPos(node) {
+export function toRegPos(node) {
   const nodel = document.getElementById('nodel')
   const elemX = node.x + nodel.offsetWidth/2
   const elemY = node.y + nodel.offsetHeight/2

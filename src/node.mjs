@@ -1,6 +1,5 @@
-class Nodel {
+export class Nodel {
 
-  // TODO refactor the constructor to take a json object directly
   static fromJSON(obj) {
     return new Nodel(
       obj.id, obj.template, obj.x, obj.y, obj.data,

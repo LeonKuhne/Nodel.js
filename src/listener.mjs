@@ -1,4 +1,6 @@
-class NodelListener {
+import { NodelEvent } from './event.mjs'
+
+export class NodelListener {
   constructor(nodeManager, nodeRender) {
     this.manager = nodeManager
     this.render = nodeRender

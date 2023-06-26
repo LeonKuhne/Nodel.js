@@ -1,4 +1,6 @@
-class NodelManager {
+import { uniqueId, arrRemove } from './util.mjs'
+
+export class NodelManager {
   constructor(renderEngine) {
     this.nodes = {}
     this.render = renderEngine

@@ -1,4 +1,4 @@
-class NodelEvent {
+export class NodelEvent {
 
   static TYPES = {
     Node: 0,

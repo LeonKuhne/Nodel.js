@@ -2,6 +2,11 @@
 title "nodel"
 help .cd | indent
 
+function test() {
+  open http://localhost:8000
+  npm test
+}
+
 function build() {
   rm nodel.js
   # build unordered libraries
