@@ -3,8 +3,10 @@ module.exports = {
   output: {
     filename: 'nodel.js',
     path: require('path').resolve(__dirname, 'dist'),
-    library: 'Nodel',
-    libraryTarget: 'umd',
+    libraryTarget: 'module',
+  },
+  experiments: {
+    outputModule: true,
   },
   mode: 'development', //'production',
   // use skeleton loader to load leader-line

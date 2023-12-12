@@ -1,9 +1,9 @@
 import { NodelEvent } from './event.mjs'
 
 export class NodelListener {
-  constructor(nodeManager, nodeRender) {
-    this.manager = nodeManager
+  constructor(nodeRender, nodeManager) {
     this.render = nodeRender
+    this.manager = nodeManager
   }
   on(eventType, callback, connections=false) {
     // listen for events on connections

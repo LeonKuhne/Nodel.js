@@ -3,6 +3,7 @@ title "nodel"
 help .cd | indent
 
 function run() {
+  if [ ! -d "dist" ]; then; mkdir dist; fi
   build
   $(
     cd dist
@@ -15,12 +16,13 @@ function build() {
 }
 
 function release() {
+  if [ ! -d "dist" ]; then; mkdir dist; fi
   npm run release
   npx uglifyjs --compress --mangle -- dist/nodel.js > dist/nodel.min.js
-  $(
-    cd dist
-    git add .
-    git commit -m "publishing release"
-    git push --force origin gh-pages
-  )
+  # make sure dist exists
+  cd dist 
+  git add . 
+  git commit -m "releasing" 
+  git push origin gh-pages --force
+  cd ..
 }
