@@ -7,7 +7,6 @@ function run() {
   $(
     cd demo
     serve
-    cd -
   )
 }
 
@@ -20,5 +19,8 @@ function release() {
   npm run release
   cp dist/nodel.js demo/nodel.js
   npx uglifyjs --compress --mangle -- dist/nodel.js > dist/nodel.min.js
-  git subtree push --prefix demo origin gh-pages
+  $(
+    cd demo
+    git push --force origin gh-pages
+  )
 }
