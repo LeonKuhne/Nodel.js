@@ -5,7 +5,7 @@ help .cd | indent
 function run() {
   build
   $(
-    cd docs
+    cd demo
     serve
     cd -
   )
@@ -13,10 +13,12 @@ function run() {
 
 function build() {
   npm run build
-  cp dist/nodel.js docs/nodel.js
+  cp dist/nodel.js demo/nodel.js
 }
 
 function release() {
   npm run release
+  cp dist/nodel.js demo/nodel.js
   npx uglifyjs --compress --mangle -- dist/nodel.js > dist/nodel.min.js
+  git subtree push --prefix demo origin gh-pages
 }
