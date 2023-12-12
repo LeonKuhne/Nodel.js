@@ -1,7 +1,7 @@
 module.exports = {
   entry: './src/index.mjs',
   output: {
-    filename: 'nodel.js',
+    filename: 'nodel.min.mjs',
     path: require('path').resolve(__dirname, 'dist'),
     libraryTarget: 'module',
   },
