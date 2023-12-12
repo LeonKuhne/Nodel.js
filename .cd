@@ -5,7 +5,7 @@ help .cd | indent
 function run() {
   build
   $(
-    cd dist
+    cd docs
     serve
     cd -
   )
@@ -13,14 +13,10 @@ function run() {
 
 function build() {
   npm run build
-  clean
+  cp dist/nodel.js docs/nodel.js
 }
 
 function release() {
   npm run release
   npx uglifyjs --compress --mangle -- dist/nodel.js > dist/nodel.min.js
-}
-
-function clean() {
-  sed -i '' "/^.*console\.debug.*$/d" dist/nodel.js
 }
