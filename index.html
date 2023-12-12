@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <title>Nodel Example</title>
     <link rel='stylesheet' href='styles.css'>
-    <script src='nodel.js' type="module"></script>
     <style>
       html, body, #nodel {
         width: 100%;
@@ -28,11 +27,12 @@
         background: #fffa;
       }
     </style>
-    <script>
+    <script type="module">
+      import Nodel from './nodel.js'
       window.onload = () => {
-        render = Nodel.Render
-        manage = Nodel.Manage
-        listen = Nodel.Listen
+        const render = new Nodel.Renderer()
+        const manage = new Nodel.Manager(render)
+        const listen = new Nodel.Listener(render, manage)
         
         // create some nodes
         let nodeAId = manage.addNode('basic', -100, 50, {name: 'A'})
