@@ -2,13 +2,13 @@
   "name": "nodel",
   "version": "1.0.0",
   "description": "Library for positioning DOM elements with x,y coordinates",
-  "main": "src/index.mjs",
+  "private": true,
   "directories": {
     "lib": "lib"
   },
   "scripts": {
-    "start": "parcel index.html",
-    "test": "npm start && python -m http.server 8000"
+    "build": "npx webpack --config webpack.config.js",
+    "release": "npx webpack --config webpack.config.js --mode production"
   },
   "repository": {
     "type": "git",
@@ -20,8 +20,13 @@
     "url": "https://github.com/leonkuhne/nodel/issues"
   },
   "homepage": "https://github.com/leonkuhne/nodel#readme",
+  "devDependencies": {
+    "skeleton-loader": "^2.0.0",
+    "uglify-js": "^3.17.4",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
   "dependencies": {
-    "@jsplumb/browser-ui": "^6.2.8",
-    "parcel-bundler": "^1.12.5"
+    "leader-line": "^1.0.7"
   }
 }

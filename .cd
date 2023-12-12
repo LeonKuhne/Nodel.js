@@ -2,41 +2,25 @@
 title "nodel"
 help .cd | indent
 
-function test() {
-  open http://localhost:8000
-  npm test
+function run() {
+  build
+  $(
+    cd dist
+    serve
+    cd -
+  )
 }
 
 function build() {
-  rm nodel.js
-  # build unordered libraries
-  for f in lib/*; do
-    chunk $f
-  done
-  # build ordered source
-  chunk src/util.js
-  chunk src/node.js
-  chunk src/event.js
-  chunk src/manager.js
-  chunk src/renderer.js
-  chunk src/listener.js
+  npm run build
   clean
 }
 
 function release() {
-  build
-  # minify js
-  uglifyjs --compress --mangle -- nodel.js > nodel.min.js
-  # minify css
-  csso nodel.css > nodel.min.css
-}
-
-function chunk() {
-  echo "// $(basename $1)" >> nodel.js
-  cat "$1" >> nodel.js
-  echo >> nodel.js
+  npm run release
+  npx uglifyjs --compress --mangle -- dist/nodel.js > dist/nodel.min.js
 }
 
 function clean() {
-  sed -i '' "/^.*console\.debug.*$/d" nodel.js
+  sed -i '' "/^.*console\.debug.*$/d" dist/nodel.js
 }

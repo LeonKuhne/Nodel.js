@@ -1,16 +1,12 @@
 import { findTemplates } from './util.mjs'
 import { toRegPos } from './util.mjs'
-import { newInstance } from "@jsplumb/browser-ui"
+import LeaderLine from 'leader-line'
 
 export class NodelRender {
   constructor() {
     this.recenter()
     this.resetScale()
     this.templates = findTemplates()
-
-    this.pencil = newInstance({
-        container: document.getElementById('nodel')
-    })
 
     // hide the templates
     this.hideTemplates = false
@@ -22,6 +18,7 @@ export class NodelRender {
       'connection-color': () => '#ad00d9',
       'connection-label': () => '',
     }
+    this.lines = []
   }
   toggleTemplates() {
     this.hideTemplates = !this.hideTemplates
@@ -37,7 +34,7 @@ export class NodelRender {
     const nodel = document.getElementById('nodel')
 
     // reset the lines
-    this.pencil.deleteEveryConnection()
+    this.disconnectAll()
 
     // reset the nodes
     for (let idx = nodel.children.length-1; idx >= 0; idx--) {
@@ -105,30 +102,35 @@ export class NodelRender {
         for (const [connectionType, children] of Object.entries(leaf.children)) {
           for (const childId of children) {
             const child = nodes[childId]
-            let start = node.id
+            let start = node
             let end = null
             let dashed = false
 
             // filter out non visible nodes
             if (visibleNodes.includes(child)) {
-              end = child.id
+              end = child
             } else {
               // draw a dotted connection to the nodes parent group
               const groups = child.getInvolvedGroupNodes(nodes)
               const firstCollapsedGroup = groups.reverse().find(node => node.group.collapsed)
-              end = firstCollapsedGroup.id
+              end = firstCollapsedGroup
               dashed = true
             }
 
             // draw the connection
-            const connection = this.drawConnection(node, child, connectionType, dashed)
+            const connection = this.drawConnection(start, end, connectionType, dashed)
 
             // add any existing callbacks to the connection element
             const binding = this.connectionBinding
-            if (binding) {
-              const arrowElem = connection.connector.path
+            if (binding.eventType && binding.callback) {
+              const arrowElem = Array.from(document
+                .querySelector(`path#leader-line-${connection._id}-line-path`)
+                .closest('svg.leader-line')
+                .querySelectorAll('text'))
+                .find(elem => elem.textContent === connection.middleLabel)
+              arrowElem.classList.add('connection')
               arrowElem.addEventListener(binding.eventType, (e) => {
-                binding.callback( e, [node.id, child.id])
+                binding.callback( e, [start.id, end.id])
               })
             }
           }
@@ -144,34 +146,20 @@ export class NodelRender {
     const toElem = document.getElementById(toId)
     const lineColor = this.helpers['connection-color'](type)
     const lineLabel = this.helpers['connection-label'](fromNode, toNode, type)
-    const lineStyle = { strokeWidth: 6, stroke: lineColor }
-    const dashedLineStyle = { ...lineStyle, dashstyle: '3' }
-
-
     // draw a line to the child
-    const connection = this.pencil.connect({
-      source: fromElem,
-      target: toElem,
-      anchor: 'Continuous',
-      paintStyle: dashed ? dashedLineStyle : lineStyle,
-      overlays: [
-        {type: "Arrow", options: { location: 1 }},
-        {type: 'Label', options: { label: lineLabel, cssClass: 'line-label' }},
-      ],
-      connector: this.connectionType(fromNode, toNode)
+    const line = new LeaderLine(fromElem, toElem, {
+      middleLabel: lineLabel,
+      dash: dashed,
+      color: lineColor,
     })
-    this.pencil.setDraggable(fromElem, false)
-    this.pencil.setDraggable(toElem, false)
-    return connection
+    this.lines.push(line)
+    return line
   }
-  connectionType(fromNode, toNode, minDistance=300) {
-    if (fromNode.id == toNode.id) {
-      return "StateMachine"
-    } else if(fromNode.distanceTo(toNode) < minDistance) {
-      return "Straight"
-    } else {
-      return "Bezier"
+  disconnectAll() {
+    for (const line of this.lines) {
+      line.remove()
     }
+    this.lines = []
   }
   addConnectionBinding(eventType, callback) {
     this.connectionBinding = { eventType, callback }

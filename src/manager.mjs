@@ -1,4 +1,5 @@
 import { uniqueId, arrRemove } from './util.mjs'
+import { Nodel } from './node.mjs'
 
 export class NodelManager {
   constructor(renderEngine) {
@@ -58,7 +59,7 @@ export class NodelManager {
   addNode(templateId, x, y, data) {
     if (this.render.verify(templateId)) {
       // generate new id
-      const id = uniqueId()
+      const id = `node-${uniqueId()}`
       // create and track the node
       this.nodes[id] = new Nodel(id, templateId, x, y, data)
       this.redraw()
