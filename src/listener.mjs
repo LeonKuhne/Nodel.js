@@ -27,17 +27,12 @@ export class NodelListener {
 
         // add the node to the event if one selected
         const nodeId = e.target?.id
-        if (nodeId == 'nodel') return
         let node = null
-        if (nodeId && this.manager.verify(nodeId, true)) {
+        if (nodeId && nodeId !== 'nodel'&& this.manager.verify(nodeId, true)) {
           node = this.manager.nodes[nodeId]
         }
-
-        // create a new 'nodel' event
-        const nodelEvent = new NodelEvent(NodelEvent.TYPES.Node, e, node)
-
-        // trigger event
-        callback(nodelEvent)
+        // trigger new custom event
+        callback(new NodelEvent(NodelEvent.TYPES.Node, e, node))
       })
     }
   }

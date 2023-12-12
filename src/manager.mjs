@@ -202,7 +202,6 @@ export class NodelManager {
       const node = this.nodes[id]
       const deltaX = x - node.x
       const deltaY = y - node.y
-      // 
 
       // update the nodes location
       node.x = x

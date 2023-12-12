@@ -57,21 +57,21 @@
         let draggingId = null
         listen.on('mousedown', e => {
           if (e.node) {
-            document.body.style.cursor = 'grabbing'
+            e.elem.classList.add('dragging')
             draggingId = e.node.id
           }
         })
         listen.on('mousemove', e => {
+          console.log("dragging id", draggingId)
           if (draggingId) {
             manage.moveNode(draggingId, e.x, e.y)
-          } else if (e.node) {
-            document.body.style.cursor = 'grab'
-          } else {
-            document.body.style.cursor = 'auto'
+            document.getElementById(draggingId)
+              .classList.add('dragging')
           }
         })
         listen.on('mouseup', e => {
-          document.body.style.cursor = 'auto'
+          document.getElementById(draggingId)
+            .classList.remove('dragging')
           draggingId = null
         })
 
